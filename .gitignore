@@ -4,3 +4,7 @@
 .idea/misc.xml
 .idea/modules.xml
 .idea/vcs.xml
+venv
+.vscode
+__pycache__
+data_mining/__pycache__
