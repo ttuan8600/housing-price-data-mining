@@ -8,3 +8,5 @@ venv
 .vscode
 __pycache__
 data_mining/__pycache__
+.idea
+.venv
