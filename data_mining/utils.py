@@ -35,7 +35,7 @@ class ParserUtils:
     @staticmethod
     def parse_area(area_str):
         try:
-            area = area_str.replace("m²", "").replace(",", "").strip()
+            area = area_str.replace("m²", "").replace(",", ".").strip()
             return float(area)
         except Exception:
             return None
