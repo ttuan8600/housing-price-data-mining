@@ -156,6 +156,9 @@ class DataCrawling:
             db.insert_real_estate_collected(estate)
 
     def convert_to_processed(self, estate: RealStateCollected) -> RealEstateProcessed:
+        # Detect and swap if price_total actually contains m² (price/m2)
+        if "m²" in estate.price_total:
+            estate.price_total, estate.price_m2 = estate.price_m2, estate.price_total
         property_type = ParserUtils.parse_property_type(estate.name)
         street, ward, district = ParserUtils.parse_address_components(estate.address)
         price_total = ParserUtils.parse_price(estate.price_total)
@@ -205,11 +208,18 @@ class DataCrawling:
 
 
 if __name__ == "__main__":
-    url = "https://batdongsan.com.vn/nha-dat-ban-da-nang?vrs=1&sortValue=1"
-    crawler = DataCrawling(url)
-    data = crawler.crawl()
+    # Loop from page 1 to 15
+    for page in range(1, 16):
+        if page == 1:
+            url = "https://batdongsan.com.vn/nha-dat-ban-da-nang?vrs=1&sortValue=1"
+        else:
+            url = f"https://batdongsan.com.vn/nha-dat-ban-da-nang/p{page}?vrs=1&sortValue=1"
+        
+        print(f"Crawling page {page}: {url}")
+        crawler = DataCrawling(url)
+        data = crawler.crawl()
 
-    for item in data:
-        print(item)
+        for item in data:
+            print(item)
 
     crawler.convert_collected_to_processed()

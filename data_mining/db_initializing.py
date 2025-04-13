@@ -27,6 +27,7 @@ class DBInitializing:
         ''')
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS real_estate_processed (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT,
                 url TEXT,
                 property_type TEXT CHECK(property_type IN ('apartment', 'house', 'land')),
