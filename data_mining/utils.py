@@ -22,8 +22,12 @@ class ParserUtils:
 
             # Handle 'triệu'
             elif "triệu" in price_str:
-                price_str = price_str.replace("triệu/m²", "")
+                price_str = price_str.replace("triệu", "").replace("/m²", "")
                 return float(price_str) * 1_000_000
+            
+            elif "nghìn" in price_str:
+                price_str = price_str.replace("nghìn", "").replace("/m²", "")
+                return float(price_str) * 1_000
 
             # Otherwise just parse as raw float
             return float(price_str)
@@ -35,7 +39,7 @@ class ParserUtils:
     @staticmethod
     def parse_area(area_str):
         try:
-            area = area_str.replace("m²", "").replace(",", ".").strip()
+            area = area_str.replace("m²", "").replace(".", "").replace(",", ".").strip()
             return float(area)
         except Exception:
             return None
@@ -71,10 +75,22 @@ class ParserUtils:
     @staticmethod
     def parse_address_components(address: str):
         if not address:
-            return None, None, None
+            return "N/A", "N/A", "N/A"
 
         parts = [part.strip() for part in address.split(",")]
-        street = parts[0] if len(parts) > 0 else None
-        ward = parts[1] if len(parts) > 1 else None
-        district = parts[2] if len(parts) > 2 else None
+        len_p = len(parts)
+
+        street = parts[len_p - 4] if len_p >= 4 else "N/A"
+        ward = parts[len_p - 3] if len_p >= 3 else "N/A"
+        district = parts[len_p - 2] if len_p >= 2 else "N/A"
+
+        # Clean up district by removing "Quận" or "Huyện"
+        if district != "N/A":
+            district = district.replace("Quận", "").replace("Huyện", "").strip()
+
+        # Ensure ward starts with "Phường"
+        if ward != "N/A" and not ward.startswith("Phường"):
+            ward = f"Phường {ward}"
+
         return street, ward, district
+
