@@ -12,7 +12,7 @@ df = pd.read_sql_query ("SELECT property_type, street, ward, district, price_tot
 
 conn.close()
 
-# print(df.info())
+# print(df.tail(5))
 #
 # print(df.describe())
 
@@ -43,6 +43,21 @@ plt.xlabel('Average Price per m² (VND)')
 plt.ylabel('District')
 plt.show()
 
+# avg price per m2 by type
+avg_price_by_type = df.groupby('property_type')['price_m2'].mean().reset_index()
+
+# Sort values (optional)
+avg_price_by_type = avg_price_by_type.sort_values(by='price_m2', ascending=False)
+
+# Plot
+plt.figure(figsize=(8, 5))
+sns.barplot(data=avg_price_by_type, x='property_type', y='price_m2', hue='property_type', legend=False)
+plt.title('Average Price per m² by Property Type')
+plt.xlabel('Property Type')
+plt.ylabel('Average Price per m²')
+plt.xticks(rotation=15)
+plt.tight_layout()
+plt.show()
 # using iqr
 def detect_outliers_iqr(df, column):
     Q1 = df[column].quantile(0.25)
@@ -80,7 +95,7 @@ print('Outliers Z-Score')
 df['zscore_price_m2'] = zscore(df['price_m2'])
 
 # Set a threshold for outliers
-threshold = 3
+threshold = 2.5
 outliers_zscore = df[abs(df['zscore_price_m2']) > threshold]
 
 print(f'Outliers in price_m2 using Z-score: {len(outliers_zscore)}')
