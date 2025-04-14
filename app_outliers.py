@@ -64,7 +64,9 @@ n_outliers = filtered_df['outlier'].sum()
 st.markdown(f"### 🔍 Tổng số bất động sản bị nghi ngờ bất thường: **{n_outliers}**")
 
 if n_outliers > 0:
-    st.dataframe(filtered_df[filtered_df['outlier']][['name', 'area', 'price_total', 'district', 'ward']].head(10))
+    display_df = filtered_df[filtered_df['outlier']][['name', 'area', 'price_total', 'district', 'ward']].head(10).copy()
+    display_df['price_total'] = display_df['price_total'].apply(lambda x: f"{x:,.0f}")  # format với dấu phẩy, không có số lẻ
+    st.dataframe(display_df)
 
 # Thêm lựa chọn cho người dùng: Hiển thị chỉ outliers hay non-outliers
 view_option = st.radio("Chọn loại dữ liệu muốn hiển thị trên biểu đồ:", ["Tất cả", "Chỉ Outliers", "Chỉ Non-outliers"])
