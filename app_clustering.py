@@ -42,10 +42,17 @@ min_samples = 5
 
 # Load data again to ensure latest
 df = load_data()
-
+# Định nghĩa phạm vi tọa độ của Đà Nẵng
+long_min, long_max = 108.0, 108.3
+lat_min, lat_max = 15.9, 16.2
+# Lọc các bản ghi nằm trong phạm vi tọa độ của Đà Nẵng
+df = df[
+    (df['long'].between(long_min, long_max)) &
+    (df['lat'].between(lat_min, lat_max))
+]
 # ELBOW
 st.subheader("Elbow Method")
-data_scaled, scaler, elbow_inertia = get_elbow(load_data())
+data_scaled, scaler, elbow_inertia = get_elbow(df)
 fig, ax = plt.subplots()
 ax.plot(range(1, 11), elbow_inertia, marker='o')
 ax.set_title('Elbow Method')
@@ -120,7 +127,7 @@ cluster_df_display['price_m2'] = cluster_df_display['price_m2'].apply(lambda x: 
 cluster_df_display['price_total'] = cluster_df_display['price_total'].apply(lambda x: f"{x:,.0f} triệu VNĐ")
 
 # Chọn các cột để hiển thị
-columns_to_display = ['name', 'property_type', 'street', 'ward', 'district', 'price_total', 'price_m2', 'area', 'long', 'lat']
+columns_to_display = ['name', 'property_type', 'street', 'ward', 'district', 'price_total', 'price_m2', 'area', 'long', 'lat', 'cluster']
 cluster_df_display = cluster_df_display[columns_to_display]
 
 # Hiển thị bảng dữ liệu
