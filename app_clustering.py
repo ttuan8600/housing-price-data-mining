@@ -17,7 +17,7 @@ from sklearn.cluster import KMeans
 def load_data():
     conn = sqlite3.connect("data_real_estate.db")
     df = pd.read_sql_query("SELECT * FROM real_estate_processed", conn)
-    df = df.dropna(subset=['area', 'price_total', 'ward', 'district', 'lat', 'long']).copy()
+    df = df.dropna(subset=['area', 'price_total', 'ward', 'district', 'long', 'lat']).copy()
     return df
 
 logo_url = 'https://www.pngplay.com/wp-content/uploads/7/Home-Logo-Background-PNG-Image.png'
@@ -35,13 +35,6 @@ if algo == "KMeans":
     - Phân chia dữ liệu thành K cụm rõ ràng.
     - Phù hợp khi muốn **dự đoán cụm cho bất động sản mới**.
     - Cần chỉ định số cụm trước và có thể kém hiệu quả nếu dữ liệu chứa nhiễu.
-    """)
-else:
-    st.info("""
-    **DBSCAN – Phân cụm theo mật độ**
-    - Tự động xác định số cụm, tốt khi dữ liệu có hình dạng phức tạp hoặc nhiễu.
-    - Những điểm không thuộc cụm nào sẽ có **giá trị cluster là -1**.
-    - **Không hỗ trợ dự đoán** cho điểm mới như KMeans.
     """)
 
 eps = 0.5
@@ -153,7 +146,7 @@ for district in districts:
             f"<div><b>Cụm:</b> {row['cluster']}</div>"
         )
         folium.CircleMarker(
-            location=[row['long'], row['lat']],
+            location=[row['lat'], row['long']],
             radius=6,
             color=colors[row['cluster']],
             fill=True,
@@ -177,7 +170,7 @@ for idx, row in df.iterrows():
         f"<div><b>Cụm:</b> {row['cluster']}</div>"
     )
     folium.CircleMarker(
-        location=[row['long'], row['lat']],
+        location=[row['lat'], row['long']],
         radius=6,
         color=colors[row['cluster']],
         fill=True,
