@@ -108,7 +108,10 @@ st.subheader("Tra cứu dữ liệu theo cụm")
 selected_cluster = st.selectbox("Chọn cụm", options=['All', 0, 1, 2], index=0)
 
 # Lọc dữ liệu theo cụm được chọn
-cluster_df = df[df['cluster'] == selected_cluster] if selected_cluster.isdigit() else df
+if selected_cluster == 'All':
+    cluster_df = df  # Hiển thị toàn bộ dữ liệu
+else:
+    cluster_df = df[df['cluster'] == selected_cluster]  # Lọc theo cụm
 
 # Định dạng các cột số trước khi hiển thị
 cluster_df_display = cluster_df.copy()
