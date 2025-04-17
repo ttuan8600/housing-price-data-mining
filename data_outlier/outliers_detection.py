@@ -142,8 +142,9 @@ def detect_iqr_outliers(data):
 # Set a threshold for outliers
 def detect_zscore_outliers(data):
     data = data.copy()
+    threshold = 2
     data['z_score'] = zscore(data['price_m2'])
-    return data[(data['z_score'] > 2.5) | (data['z_score'] < -2.5)]
+    return data[(data['z_score'] > threshold) | (data['z_score'] < -threshold)]
 
 # zscore_outliers = df.groupby('property_type', group_keys=False).apply(
 #     lambda g: detect_zscore_outliers(g)

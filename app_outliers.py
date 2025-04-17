@@ -200,7 +200,7 @@ popup_style = """
     </style>
     """
 # Create a Folium map centered on the average coordinates of outliers
-map_center = [outliers['long'].mean(), outliers['lat'].mean()]
+map_center = [outliers['lat'].mean(), outliers['long'].mean()]
 m = folium.Map(location=map_center, zoom_start=13)
 # Define colors for different property types
 colors = {'apartment': 'blue', 'house': 'green', 'land': 'red'}
@@ -221,7 +221,7 @@ for district in districts:
             f"<div><b>Total Price:</b> {row['price_total']} VNĐ</div>"
         )
         folium.Marker(
-            location=[row['long'], row['lat']],
+            location=[row['lat'], row['long']],
             radius=6,
             color=colors.get(row['property_type'], 'gray'),
             fill=True,
@@ -244,7 +244,7 @@ for _, row in outliers.iterrows():
         f"<div><b>Total Price:</b> {row['price_total']} VNĐ</div>"
     )
     folium.Marker(
-        location=[row['long'], row['lat']],
+        location=[row['lat'], row['long']],
         radius=6,
         color=colors.get(row['property_type'], 'gray'),
         fill=True,
