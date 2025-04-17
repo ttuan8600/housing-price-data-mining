@@ -98,10 +98,36 @@ ax.set_yscale('log')
 ax.legend()
 
 st.pyplot(fig)
+
+# Hiển thị thông tin cụm
+st.write("Số lượng bất động sản trong mỗi cụm:")
+st.write(df['cluster'].value_counts())
+
+# Dropdown để chọn cụm
+st.subheader("Tra cứu dữ liệu theo cụm")
+selected_cluster = st.selectbox("Chọn cụm", options=['All', 0, 1, 2], index=0)
+
+# Lọc dữ liệu theo cụm được chọn
+cluster_df = df[df['cluster'] == selected_cluster] if selected_cluster.isdigit() else df
+
+# Định dạng các cột số trước khi hiển thị
+cluster_df_display = cluster_df.copy()
+cluster_df_display['area'] = cluster_df_display['area'].apply(lambda x: f"{x:,.0f} m²")
+cluster_df_display['price_m2'] = cluster_df_display['price_m2'].apply(lambda x: f"{x:,.2f} triệu VNĐ/m²")
+cluster_df_display['price_total'] = cluster_df_display['price_total'].apply(lambda x: f"{x:,.0f} triệu VNĐ")
+
+# Chọn các cột để hiển thị
+columns_to_display = ['name', 'property_type', 'street', 'ward', 'district', 'price_total', 'price_m2', 'area', 'long', 'lat']
+cluster_df_display = cluster_df_display[columns_to_display]
+
+# Hiển thị bảng dữ liệu
+st.write(f"Dữ liệu của Cụm {selected_cluster}:")
+st.dataframe(cluster_df_display, use_container_width=True)
+
 # Visualization
 
 # Folium Map
-map_center = [df['long'].mean(), df['lat'].mean()]
+map_center = [df['lat'].mean(), df['long'].mean()]
 m = folium.Map(location=map_center, zoom_start=12)
 
 popup_style = """
