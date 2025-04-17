@@ -17,7 +17,7 @@ from sklearn.cluster import KMeans
 def load_data():
     conn = sqlite3.connect("data_real_estate.db")
     df = pd.read_sql_query("SELECT * FROM real_estate_processed", conn)
-    df = df.dropna(subset=['area', 'price_total', 'ward', 'district', 'lat', 'long']).copy()
+    df = df.dropna(subset=['area', 'price_total', 'ward', 'district', 'long', 'lat']).copy()
     return df
 
 logo_url = 'https://www.pngplay.com/wp-content/uploads/7/Home-Logo-Background-PNG-Image.png'
@@ -36,23 +36,23 @@ if algo == "KMeans":
     - Phù hợp khi muốn **dự đoán cụm cho bất động sản mới**.
     - Cần chỉ định số cụm trước và có thể kém hiệu quả nếu dữ liệu chứa nhiễu.
     """)
-else:
-    st.info("""
-    **DBSCAN – Phân cụm theo mật độ**
-    - Tự động xác định số cụm, tốt khi dữ liệu có hình dạng phức tạp hoặc nhiễu.
-    - Những điểm không thuộc cụm nào sẽ có **giá trị cluster là -1**.
-    - **Không hỗ trợ dự đoán** cho điểm mới như KMeans.
-    """)
 
 eps = 0.5
 min_samples = 5
 
 # Load data again to ensure latest
 df = load_data()
-
+# Định nghĩa phạm vi tọa độ của Đà Nẵng
+long_min, long_max = 108.0, 108.3
+lat_min, lat_max = 15.9, 16.2
+# Lọc các bản ghi nằm trong phạm vi tọa độ của Đà Nẵng
+df = df[
+    (df['long'].between(long_min, long_max)) &
+    (df['lat'].between(lat_min, lat_max))
+]
 # ELBOW
 st.subheader("Elbow Method")
-data_scaled, scaler, elbow_inertia = get_elbow(load_data())
+data_scaled, scaler, elbow_inertia = get_elbow(df)
 fig, ax = plt.subplots()
 ax.plot(range(1, 11), elbow_inertia, marker='o')
 ax.set_title('Elbow Method')
@@ -105,10 +105,39 @@ ax.set_yscale('log')
 ax.legend()
 
 st.pyplot(fig)
+
+# Hiển thị thông tin cụm
+st.write("Số lượng bất động sản trong mỗi cụm:")
+st.write(df['cluster'].value_counts())
+
+# Dropdown để chọn cụm
+st.subheader("Tra cứu dữ liệu theo cụm")
+selected_cluster = st.selectbox("Chọn cụm", options=['All', 0, 1, 2], index=0)
+
+# Lọc dữ liệu theo cụm được chọn
+if selected_cluster == 'All':
+    cluster_df = df  # Hiển thị toàn bộ dữ liệu
+else:
+    cluster_df = df[df['cluster'] == selected_cluster]  # Lọc theo cụm
+
+# Định dạng các cột số trước khi hiển thị
+cluster_df_display = cluster_df.copy()
+cluster_df_display['area'] = cluster_df_display['area'].apply(lambda x: f"{x:,.0f} m²")
+cluster_df_display['price_m2'] = cluster_df_display['price_m2'].apply(lambda x: f"{x:,.2f} triệu VNĐ/m²")
+cluster_df_display['price_total'] = cluster_df_display['price_total'].apply(lambda x: f"{x:,.0f} triệu VNĐ")
+
+# Chọn các cột để hiển thị
+columns_to_display = ['name', 'property_type', 'street', 'ward', 'district', 'price_total', 'price_m2', 'area', 'long', 'lat', 'cluster']
+cluster_df_display = cluster_df_display[columns_to_display]
+
+# Hiển thị bảng dữ liệu
+st.write(f"Dữ liệu của Cụm {selected_cluster}:")
+st.dataframe(cluster_df_display, use_container_width=True)
+
 # Visualization
 
 # Folium Map
-map_center = [df['long'].mean(), df['lat'].mean()]
+map_center = [df['lat'].mean(), df['long'].mean()]
 m = folium.Map(location=map_center, zoom_start=12)
 
 popup_style = """
@@ -153,7 +182,7 @@ for district in districts:
             f"<div><b>Cụm:</b> {row['cluster']}</div>"
         )
         folium.CircleMarker(
-            location=[row['long'], row['lat']],
+            location=[row['lat'], row['long']],
             radius=6,
             color=colors[row['cluster']],
             fill=True,
@@ -177,7 +206,7 @@ for idx, row in df.iterrows():
         f"<div><b>Cụm:</b> {row['cluster']}</div>"
     )
     folium.CircleMarker(
-        location=[row['long'], row['lat']],
+        location=[row['lat'], row['long']],
         radius=6,
         color=colors[row['cluster']],
         fill=True,

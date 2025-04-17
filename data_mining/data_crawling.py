@@ -164,7 +164,7 @@ class DataCrawling:
         price_total = ParserUtils.parse_price(estate.price_total)
         price_m2 = ParserUtils.parse_price(estate.price_m2)
         area = ParserUtils.parse_area(estate.area)
-        long, lat = ParserUtils.parse_coordinates(estate.map_data_src)
+        lat, long = ParserUtils.parse_coordinates(estate.map_data_src)
 
         return RealEstateProcessed(
             name=estate.name,
