@@ -209,17 +209,20 @@ class DataCrawling:
 
 if __name__ == "__main__":
     # Loop from page 1 to 15
-    for page in range(1, 16):
-        if page == 1:
-            url = "https://batdongsan.com.vn/nha-dat-ban-da-nang?vrs=1&sortValue=1"
-        else:
-            url = f"https://batdongsan.com.vn/nha-dat-ban-da-nang/p{page}?vrs=1&sortValue=1"
+    # for page in range(1, 16):
+    #     if page == 1:
+    #         url = "https://batdongsan.com.vn/nha-dat-ban-da-nang?vrs=1&sortValue=1"
+    #     else:
+    #         url = f"https://batdongsan.com.vn/nha-dat-ban-da-nang/p{page}?vrs=1&sortValue=1"
         
-        print(f"Crawling page {page}: {url}")
-        crawler = DataCrawling(url)
-        data = crawler.crawl()
+    #     print(f"Crawling page {page}: {url}")
+    #     crawler = DataCrawling(url)
+    #     data = crawler.crawl()
 
-        for item in data:
-            print(item)
+    #     for item in data:
+    #         print(item)
 
+    # crawler.convert_collected_to_processed()
+
+    crawler = DataCrawling(None)
     crawler.convert_collected_to_processed()

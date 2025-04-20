@@ -66,11 +66,20 @@ class ParserUtils:
             return "land"
 
         name = name.lower()
-        if "căn hộ" in name:
+
+        has_land_keywords = "lô" in name or "đất" in name
+        has_residential_keywords = any(keyword in name for keyword in ["biệt thự", "khách sạn", "căn hộ"])
+
+        if has_land_keywords and has_residential_keywords:
+            return "need to check"
+        elif has_residential_keywords:
             return "apartment"
         elif "nhà" in name:
             return "house"
-        return "land"
+        elif has_land_keywords:
+            return "land"
+        else:
+            return "land"
 
     @staticmethod
     def parse_address_components(address: str):

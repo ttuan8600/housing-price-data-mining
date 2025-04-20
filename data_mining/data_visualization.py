@@ -93,6 +93,6 @@ if __name__ == "__main__":
     db_i_obj = DBInitializing()
     da_vi_obj = DataVisualization(db_i_obj)
     # da_vi_obj.plot_area()
-    # da_vi_obj.plot_price_total_vs_estimated()
+    da_vi_obj.plot_price_total_vs_estimated()
     # da_vi_obj.plot_property_type_distribution()
-    da_vi_obj.plot_district_counts()
+    # da_vi_obj.plot_district_counts()

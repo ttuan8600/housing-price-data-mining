@@ -30,7 +30,7 @@ class DBInitializing:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT,
                 url TEXT,
-                property_type TEXT CHECK(property_type IN ('apartment', 'house', 'land')),
+                property_type TEXT CHECK(property_type IN ('apartment', 'house', 'land', 'need to check')),
                 street TEXT,
                 ward TEXT,
                 district TEXT,
@@ -95,7 +95,7 @@ class DBInitializing:
 
 if __name__ == "__main__":
     db_init_obj = DBInitializing()
-    db_init_obj.clear_real_estate_collected()
-    db_init_obj.clear_real_estate_processed()
+    # db_init_obj.clear_real_estate_collected()
+    # db_init_obj.clear_real_estate_processed()
     db_init_obj.close()
 
