@@ -140,3 +140,27 @@ ax4.yaxis.set_major_formatter(FuncFormatter(formatter))
 plt.xticks(rotation=15)
 plt.tight_layout()
 st.pyplot(fig4)
+
+area_plot = alt.Chart(filtered_df).mark_area(opacity=0.4).encode(
+    x=alt.X('area:Q', bin=alt.Bin(maxbins=40), title='Diện tích (m²)'),
+    y=alt.Y('count()', stack=None, title='Số lượng'),
+    color=alt.Color('property_type:N', title='Loại bất động sản')
+).properties(
+    width=700,
+    height=400,
+    title='Biểu đồ phân phối diện tích theo loại bất động sản'
+)
+
+st.altair_chart(area_plot, use_container_width=True)
+
+price_plot = alt.Chart(filtered_df).mark_area(opacity=0.4).encode(
+    x=alt.X('price_total:Q', bin=alt.Bin(maxbins=40), title='Tổng giá (VND)'),
+    y=alt.Y('count()', stack=None, title='Số lượng'),
+    color=alt.Color('property_type:N', title='Loại bất động sản')
+).properties(
+    width=700,
+    height=400,
+    title='Phân phối tổng giá theo loại bất động sản'
+)
+
+st.altair_chart(price_plot, use_container_width=True)

@@ -54,8 +54,8 @@ def IQR_method(df, n=1, features=None):
     for column in features:
         if column not in df.columns or not np.issubdtype(df[column].dtype, np.number):
             continue
-        Q1 = np.percentile(df[column], 25)
-        Q3 = np.percentile(df[column], 75)
+        Q1 = np.percentile(df[column], 20)
+        Q3 = np.percentile(df[column], 80)
         IQR = Q3 - Q1
         outlier_step = 1.5 * IQR
         lower_bound = Q1 - outlier_step
@@ -107,7 +107,7 @@ def z_scoremod_method(df, n=1, features=None):
         features = df.select_dtypes(include=[np.number]).columns.tolist()
 
     outlier_dict = {}  # Store index: [reasons]
-    threshold = 3
+    threshold = 6
 
     for column in features:
         if column not in df.columns or not np.issubdtype(df[column].dtype, np.number):
