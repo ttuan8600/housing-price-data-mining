@@ -13,3 +13,4 @@ altair~=5.5.0
 joblib~=1.4.2
 folium~=0.19.5
 streamlit_folium~=0.24.1
+streamlit_aggrid~=1.1.3
