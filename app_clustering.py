@@ -13,7 +13,8 @@ import folium
 from folium.features import CustomIcon
 from sklearn.cluster import KMeans
 from st_aggrid import AgGrid, GridOptionsBuilder
-# Load data từ SQLite
+
+# Load data from SQLite
 @st.cache_data
 def load_data():
     conn = sqlite3.connect("data_real_estate.db")
@@ -21,9 +22,8 @@ def load_data():
     df = df.dropna(subset=['area', 'price_total', 'ward', 'district', 'long', 'lat']).copy()
     return df
 
-logo_url = 'https://www.pngplay.com/wp-content/uploads/7/Home-Logo-Background-PNG-Image.png'
 
-st.title("🏡 Phân tích giá nhà đất - Phân cụm")
+st.title("🏡 Real Estate Price Analysis - Clustering")
 df = load_data()
 
 eps = 0.5
@@ -31,75 +31,70 @@ min_samples = 5
 
 df = standardize_data(df)
 
-# ELBOW
+# Elbow Method
 data_scaled, scaler, elbow_inertia = get_elbow(df)
-# ELBOW
 
-# K-Means Process
+# K-Means Clustering
 kmeans = KMeans(n_clusters=3, random_state=42)
 kmeans.fit(data_scaled)
 labels = kmeans.labels_
 centroids = kmeans.cluster_centers_
 df['cluster'] = labels
-# K-Means Process
 
-# Hiển thị thông tin cụm
-
+# Cluster name mapping
 cluster_name_mapping = {
-    0: "Trung cấp, gần trung tâm",
-    1: "Cao cấp, đắc địa",
-    2: "Phổ thông, xa trung tâm, ngoại ô"
+    0: "Mid-range, near center",
+    1: "High-end, prime location",
+    2: "Affordable, outskirts"
 }
 
-st.write("Số lượng bất động sản trong mỗi cụm:")
+# Cluster counts
+st.write("Number of properties in each cluster:")
 cluster_counts = df['cluster'].map(cluster_name_mapping).value_counts()
 st.write(cluster_counts)
 
-# Dropdown để chọn cụm
-st.subheader("Tra cứu dữ liệu theo cụm")
-# Tạo danh sách tùy chọn cho dropdown, bao gồm 'All' và các tên cụm
+# Dropdown to select cluster
+st.subheader("Search Data by Cluster")
 cluster_options = ['All'] + list(cluster_name_mapping.values())
-selected_cluster_display = st.selectbox("Chọn cụm", options=cluster_options, index=0)
+selected_cluster_display = st.selectbox("Select Cluster", options=cluster_options, index=0)
 
-# Lọc dữ liệu theo cụm được chọn
+# Filter data based on selected cluster
 if selected_cluster_display == 'All':
-    cluster_df = df  # Hiển thị toàn bộ dữ liệu
+    cluster_df = df
 else:
-    # Chuyển tên cụm trở lại giá trị số để lọc dữ liệu
     selected_cluster = [k for k, v in cluster_name_mapping.items() if v == selected_cluster_display][0]
-    cluster_df = df[df['cluster'] == selected_cluster]  # Lọc theo cụm
-# Định dạng dữ liệu
+    cluster_df = df[df['cluster'] == selected_cluster]
+
+# Format data
 cluster_df_display = cluster_df.copy()
-cluster_df_display['price_m2'] = cluster_df_display['price_m2'].apply(lambda x: f"{x:,.2f} triệu VNĐ/m²")
-cluster_df_display['price_total'] = cluster_df_display['price_total'].apply(lambda x: f"{x:,.0f} triệu VNĐ")
+cluster_df_display['price_m2'] = cluster_df_display['price_m2'].apply(lambda x: f"{x:,.2f} million VND/m²")
+cluster_df_display['price_total'] = cluster_df_display['price_total'].apply(lambda x: f"{x:,.0f} million VND")
 cluster_df_display['cluster'] = cluster_df_display['cluster'].map(cluster_name_mapping)
 cluster_df_display = cluster_df_display.reset_index()
 columns_to_display = ['id', 'name', 'district', 'price_total', 'price_m2']
 cluster_df_display = cluster_df_display[columns_to_display]
 
-# Cấu hình AgGrid
+# AgGrid configuration
 gb = GridOptionsBuilder.from_dataframe(cluster_df_display)
 gb.configure_column('id', headerName='ID', width=80)
-gb.configure_column('name', headerName='Tên')
-gb.configure_column('district', headerName='Quận')
-gb.configure_column('price_total', headerName='Giá')
-gb.configure_column('price_m2', headerName='Giá/m²')
-gb.configure_selection('single', use_checkbox=False)  # Cho phép chọn 1 hàng
+gb.configure_column('name', headerName='Name')
+gb.configure_column('district', headerName='District')
+gb.configure_column('price_total', headerName='Total Price')
+gb.configure_column('price_m2', headerName='Price per m²')
+gb.configure_selection('single', use_checkbox=False)
 grid_options = gb.build()
 
-# Hiển thị bảng với AgGrid
-st.subheader(f"Dữ liệu của {'Tất cả các cụm' if selected_cluster_display == 'All' else selected_cluster_display}:")
+# Display data table
+st.subheader(f"Data for {'All Clusters' if selected_cluster_display == 'All' else selected_cluster_display}:")
 grid_response = AgGrid(cluster_df_display, gridOptions=grid_options, height=400, allow_unsafe_jscode=True)
 
+# Keyword search
+search_text = st.text_input("🔍 Enter keyword to search (name, street, ward, district)", "")
 
-# Nhập ID từ người dùng
-search_text = st.text_input("🔍 Nhập từ khóa để tìm (tên BĐS, đường, phường, quận)", "")
-
-# Tạo placeholder cho bản đồ
+# Map placeholder
 map_placeholder = st.empty()
-# Visualization
 
-# Folium Map
+# Folium map
 map_center = [df['lat'].mean(), df['long'].mean()]
 m = folium.Map(location=map_center, zoom_start=12)
 
@@ -119,30 +114,23 @@ popup_style = """
     }
 </style>
 """
-custom_icon = CustomIcon(
-        icon_image=logo_url,
-        icon_size=(20, 20)
-    )
-
 districts = sorted(df['district'].unique())
 colors = {0: 'blue', 1: 'green', 2: 'purple'}
 
+# Add layers for each district
 for district in districts:
-    # Tạo FeatureGroup cho quận
-    fg = folium.FeatureGroup(name=district, show=False)  # Mặc định ẩn
-    # Lọc dữ liệu theo quận
+    fg = folium.FeatureGroup(name=district, show=False)
     district_df = df[df['district'] == district]
-    # Thêm markers
     for idx, row in district_df.iterrows():
         popup_content = (
             f"{popup_style}"
-            f"<div><b>Tên:</b> {row['name']}</div>"         
-            f"<div><b>Diện tích:</b> {row['area']:,.0f} m2</div>"
-            f"<div><b>Giá/m2:</b> {row['price_m2']:,.0f} VNĐ</div>"
-            f"<div><b>Giá:</b> {row['price_total']:,.0f} VNĐ</div>"
-            f"<div><b>Quận:</b> {row['district']}</div>"
-            f"<div><b>Địa chỉ:</b> {row['street']}, {row['ward']}, {row['district']}</div>"
-            f"<div><b>Cụm:</b> {cluster_name_mapping[row['cluster']]}</div>"
+            f"<div><b>Name:</b> {row['name']}</div>"         
+            f"<div><b>Area:</b> {row['area']:,.0f} m²</div>"
+            f"<div><b>Price/m²:</b> {row['price_m2']:,.0f} VND</div>"
+            f"<div><b>Total Price:</b> {row['price_total']:,.0f} VND</div>"
+            f"<div><b>District:</b> {row['district']}</div>"
+            f"<div><b>Address:</b> {row['street']}, {row['ward']}, {row['district']}</div>"
+            f"<div><b>Cluster:</b> {cluster_name_mapping[row['cluster']]}</div>"
         )
         folium.CircleMarker(
             location=[row['lat'], row['long']],
@@ -155,18 +143,18 @@ for district in districts:
         ).add_to(fg)
     fg.add_to(m)
 
-# Thêm layer tất cả
-fg_all = folium.FeatureGroup(name='Tất cả', show=True)  # Mặc định hiển thị
+# Add all data layer
+fg_all = folium.FeatureGroup(name='All', show=True)
 for idx, row in df.iterrows():
     popup_content = (
         f"{popup_style}"
-        f"<div><b>Tên:</b> {row['name']}</div>"
-        f"<div><b>Diện tích:</b> {row['area']:,.0f} m2</div>"
-        f"<div><b>Giá/m2:</b> {row['price_m2']:,.0f} VNĐ</div>"
-        f"<div><b>Giá:</b> {row['price_total']:,.0f} VNĐ</div>"
-        f"<div><b>Quận:</b> {row['district']}</div>"
-        f"<div><b>Địa chỉ:</b> {row['street']}, {row['ward']}, {row['district']}</div>"
-        f"<div><b>Cụm:</b> {cluster_name_mapping[row['cluster']]}</div>"
+        f"<div><b>Name:</b> {row['name']}</div>"
+        f"<div><b>Area:</b> {row['area']:,.0f} m²</div>"
+        f"<div><b>Price/m²:</b> {row['price_m2']:,.0f} VND</div>"
+        f"<div><b>Total Price:</b> {row['price_total']:,.0f} VND</div>"
+        f"<div><b>District:</b> {row['district']}</div>"
+        f"<div><b>Address:</b> {row['street']}, {row['ward']}, {row['district']}</div>"
+        f"<div><b>Cluster:</b> {cluster_name_mapping[row['cluster']]}</div>"
     )
     folium.CircleMarker(
         location=[row['lat'], row['long']],
@@ -179,6 +167,7 @@ for idx, row in df.iterrows():
     ).add_to(fg_all)
 fg_all.add_to(m)
 
+# If searching
 if search_text:
     mask = (
             df['name'].str.contains(search_text, case=False, na=False) |
@@ -192,13 +181,13 @@ if search_text:
         for idx, row in filtered_df.iterrows():
             popup_content = (
                 f"{popup_style}"
-                f"<div><b>Tên:</b> {row['name']}</div>"
-                f"<div><b>Diện tích:</b> {row['area']:,.0f} m2</div>"
-                f"<div><b>Giá/m2:</b> {row['price_m2']:,.0f} VNĐ</div>"
-                f"<div><b>Giá:</b> {row['price_total']:,.0f} VNĐ</div>"
-                f"<div><b>Quận:</b> {row['district']}</div>"
-                f"<div><b>Địa chỉ:</b> {row['street']}, {row['ward']}, {row['district']}</div>"
-                f"<div><b>Cụm:</b> {cluster_name_mapping[row['cluster']]}</div>"
+                f"<div><b>Name:</b> {row['name']}</div>"
+                f"<div><b>Area:</b> {row['area']:,.0f} m²</div>"
+                f"<div><b>Price/m²:</b> {row['price_m2']:,.0f} VND</div>"
+                f"<div><b>Total Price:</b> {row['price_total']:,.0f} VND</div>"
+                f"<div><b>District:</b> {row['district']}</div>"
+                f"<div><b>Address:</b> {row['street']}, {row['ward']}, {row['district']}</div>"
+                f"<div><b>Cluster:</b> {cluster_name_mapping[row['cluster']]}</div>"
             )
             folium.Marker(
                 location=[row['lat'], row['long']],
@@ -206,14 +195,12 @@ if search_text:
                 icon=folium.Icon(color='red', icon='search')
             ).add_to(m)
 
-        # Zoom tới vị trí kết quả đầu tiên
         first_row = filtered_df.iloc[0]
         m.location = [first_row['lat'], first_row['long']]
         m.zoom_start = 16
 
-# Thêm LayerControl
+# Add layer control
 folium.LayerControl(collapsed=False).add_to(m)
 
+# Show map
 st_folium(m, width=700, height=500)
-
-# Folium Map
