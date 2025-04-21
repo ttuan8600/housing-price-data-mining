@@ -4,78 +4,20 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import zscore
-import plotly.express as px
-import folium
 
-# conn = sqlite3.connect('data_real_estate.db')
+from scipy.stats import median_abs_deviation
+import numpy as np
+from collections import Counter
+
+# conn = sqlite3.connect('../data_real_estate.db')
 #
-# df = pd.read_sql_query ("SELECT property_type, street, ward, district, price_total, price_m2, area, long, lat FROM real_estate_processed", conn)
+# df = pd.read_sql_query(
+#     "SELECT property_type, street, ward, district, price_total, price_m2, area, long, lat FROM real_estate_processed",
+#     conn)
 #
 # conn.close()
-
-# print(df.tail(5))
 #
-# print(df.describe())
-
-# Plot: Price per m2 by Property Type
-# plt.figure(figsize=(12, 6))
-# sns.boxplot(data=df, x='property_type', y='price_m2',hue='property_type',)
-# plt.title('Price per m² by Property Type')
-# plt.xlabel('Property Type')
-# plt.ylabel('Price per m² (VND)')
-# plt.xticks(rotation=45)
-# plt.tight_layout()
-# plt.show()
-
-# area vs total price
-# plt.figure(figsize=(12, 7))
-# sns.scatterplot(
-#     data=df,
-#     x='area',
-#     y='price_total',
-#     hue='property_type',
-#     alpha=0.7,
-#     edgecolor=None
-# )
-
-# plt.title('Total Price vs Area by Property Type')
-# plt.xlabel('Area (m²)')
-# plt.ylabel('Total Price (VND)')
-# plt.legend(title='Property Type', bbox_to_anchor=(1.05, 1), loc='upper left')
-# plt.grid(True)
-# plt.tight_layout()
-# plt.show()
-
-# Group by both district and property_type
-# avg_price_by_district_type = df.groupby(['district', 'property_type'])['price_m2'].mean().unstack()
-
-# Plot
-# plt.figure(figsize=(14, 8))
-# avg_price_by_district_type.plot(kind='barh', stacked=False, colormap='tab10', figsize=(14, 8))
-#
-# plt.title('Average Price per m² by District and Property Type')
-# plt.xlabel('Average Price per m² (VND)')
-# plt.ylabel('District')
-# plt.legend(title='Property Type', bbox_to_anchor=(1.05, 1), loc='upper left')
-# plt.grid(axis='x', linestyle='--', alpha=0.7)
-# plt.tight_layout()
-# plt.show()
-
-# avg price per m2 by type
-# avg_price_by_type = df.groupby('property_type')['price_m2'].mean().reset_index()
-
-# Sort values (optional)
-# avg_price_by_type = avg_price_by_type.sort_values(by='price_m2', ascending=False)
-
-# Plot
-# plt.figure(figsize=(8, 5))
-# sns.barplot(data=avg_price_by_type, x='property_type', y='price_m2', hue='property_type', legend=False)
-# plt.title('Average Price per m² by Property Type')
-# plt.xlabel('Property Type')
-# plt.ylabel('Average Price per m²')
-# plt.xticks(rotation=15)
-# plt.tight_layout()
-# plt.show()
+# feature_list = ['price_m2', 'area', 'price_total']
 
 # using iqr
 def detect_iqr_outliers(data):
@@ -86,59 +28,6 @@ def detect_iqr_outliers(data):
     upper_bound = Q3 + 1.5 * IQR
     return data[(data['price_m2'] < lower_bound) | (data['price_m2'] > upper_bound)]
 
-# detect outliers in price_m2
-# print('-----------------------------------------------------')
-# print('Outliers IQR')
-# iqr_outliers = df.groupby('property_type', group_keys=False).apply(lambda g: detect_iqr_outliers(g))
-# print(f'Outliers in price_m2 using IQR: {len(iqr_outliers)}')
-# print(iqr_outliers.head())
-# for prop_type, group in iqr_outliers.groupby('property_type'):
-#     print(f'\nTop 5 IQR outliers for property type: {prop_type}')
-#     print(group[['street', 'price_m2', 'area', 'district', 'long', 'lat']]
-#           .sort_values('price_m2', ascending=False)
-#           .head())
-#
-# outliers = iqr_outliers  # Replace with: outliers = iqr_outliers
-
-# Create a Folium map centered on the average coordinates
-# map_center = [outliers['long'].mean(), outliers['lat'].mean()]
-# m = folium.Map(location=map_center, zoom_start=13)
-#
-# # Define colors for different property types
-# colors = {'apartment': 'blue', 'house': 'green', 'land': 'red'}
-#
-# # Add markers for each outlier
-# for _, row in outliers.iterrows():
-#     popup_text = (f"Property: {row['property_type']}<br>"
-#                   f"Street: {row['street']}<br>"
-#                   f"District: {row['district']}<br>"
-#                   f"Price/m²: {row['price_m2']}<br>"
-#                   f"Area: {row['area']} m²")
-#     folium.Marker(
-#         location=[row['long'], row['lat']],
-#         popup=popup_text,
-#         icon=folium.Icon(color=colors.get(row['property_type'], 'gray'))
-#     ).add_to(m)
-#
-# # Save the map to an HTML file
-# m.save('iqr_outliers_map.html')
-# print("Map saved as 'outliers_map.html'. Open it in a web browser to view.")
-#
-# # Plotting
-# plt.figure(figsize=(12, 6))
-# sns.stripplot(x='property_type', y='price_m2', hue='property_type',
-#               data=iqr_outliers, jitter=True, palette='Set2', legend=False)
-# plt.title('IQR Outliers: Price per m² by Property Type')
-# plt.xlabel('Property Type')
-# plt.ylabel('Price per m² (VND)')
-# plt.xticks(rotation=45)
-# plt.tight_layout()
-# plt.show()
-# print('-----------------------------------------------------')
-# print('Outliers Z-Score')
-# # using zscore
-# df['zscore_price_m2'] = zscore(df['price_m2'])
-
 # Set a threshold for outliers
 def detect_zscore_outliers(data):
     data = data.copy()
@@ -146,49 +35,132 @@ def detect_zscore_outliers(data):
     data['z_score'] = zscore(data['price_m2'])
     return data[(data['z_score'] > threshold) | (data['z_score'] < -threshold)]
 
-# zscore_outliers = df.groupby('property_type', group_keys=False).apply(
-#     lambda g: detect_zscore_outliers(g)
-# )
-# print(f'Outliers in price_m2 using Z-score: {len(zscore_outliers)}')
-#
-# for prop_type, group in zscore_outliers.groupby('property_type'):
-#     print(f'\nTop 5 Z-score outliers for property type: {prop_type}')
-#     print(group[['street', 'price_m2', 'area', 'district', 'zscore_price_m2', 'long', 'lat']]
-#           .sort_values('zscore_price_m2', ascending=False)
-#           .head())
-# # Z-score Outliers
-# plt.figure(figsize=(12, 6))
-# sns.stripplot(x='property_type', y='price_m2', hue='property_type', data=zscore_outliers, jitter=True, palette='Set1', legend=False)
-# plt.title('Z-Score Outliers: Price per m² by Property Type')
-# plt.xlabel('Property Type')
-# plt.ylabel('Price per m² (VND)')
-# plt.xticks(rotation=45)
-# plt.tight_layout()
-# plt.show()
-#
-# outliers = zscore_outliers  # Replace with: outliers = iqr_outliers
-#
-# # Create a Folium map centered on the average coordinates
-# map_center = [outliers['long'].mean(), outliers['lat'].mean()]
-# m = folium.Map(location=map_center, zoom_start=13)
-#
-# # Define colors for different property types
-# colors = {'apartment': 'blue', 'house': 'green', 'land': 'red'}
-#
-# # Add markers for each outlier
-# for _, row in outliers.iterrows():
-#     popup_text = (f"Property: {row['property_type']}<br>"
-#                   f"Street: {row['street']}<br>"
-#                   f"District: {row['district']}<br>"
-#                   f"Price/m²: {row['price_m2']}<br>"
-#                   f"Area: {row['area']} m²")
-#     folium.Marker(
-#         location=[row['long'], row['lat']],
-#         popup=popup_text,
-#         icon=folium.Icon(color=colors.get(row['property_type'], 'gray'))
-#     ).add_to(m)
-#
-# # Save the map to an HTML file
-# m.save('zscore_outliers_map.html')
-# print("Map saved as 'zscore_outliers_map.html'. Open it in a web browser to view.")
-# print(zscore_outliers.head())
+
+def IQR_method(df, n=1, features=None):
+    """
+    Detects outliers using the IQR method, returning the outlier rows from the input DataFrame.
+    Parameters:
+    - df: DataFrame or group.
+    - n: Minimum number of features an observation must be an outlier in.
+    - features: List of column names to check.
+    Returns:
+    - DataFrame containing outlier rows with original columns plus 'is_outlier' and 'Outlier_Reason'.
+    """
+    if features is None:
+        features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+    outlier_dict = {}  # Store index: [reasons]
+
+    for column in features:
+        if column not in df.columns or not np.issubdtype(df[column].dtype, np.number):
+            continue
+        Q1 = np.percentile(df[column], 25)
+        Q3 = np.percentile(df[column], 75)
+        IQR = Q3 - Q1
+        outlier_step = 1.5 * IQR
+        lower_bound = Q1 - outlier_step
+        upper_bound = Q3 + outlier_step
+        # Check for low and high outliers separately
+        low_outliers = df[df[column] < lower_bound].index
+        high_outliers = df[df[column] > upper_bound].index
+        for idx in low_outliers:
+            if idx not in outlier_dict:
+                outlier_dict[idx] = []
+            outlier_dict[idx].append(f"Low {column}")
+        for idx in high_outliers:
+            if idx not in outlier_dict:
+                outlier_dict[idx] = []
+            outlier_dict[idx].append(f"High {column}")
+
+    # Filter observations with >= n outlier features
+    outlier_indices = [
+        idx for idx, cols in outlier_dict.items() if len(cols) >= n
+    ]
+
+    # Create the output DataFrame with outlier rows
+    if not outlier_indices:
+        # Return empty DataFrame with same columns plus is_outlier and Outlier_Reason
+        out_df = df.iloc[0:0].copy()
+        out_df['is_outlier'] = pd.Series(dtype=bool)
+        out_df['Outlier_Reason'] = pd.Series(dtype=str)
+        return out_df
+
+    out_df = df.loc[outlier_indices].copy()
+    out_df['is_outlier'] = True
+    out_df['Outlier_Reason'] = [
+        ', '.join(outlier_dict[idx]) for idx in out_df.index
+    ]
+
+    return out_df
+
+def z_scoremod_method(df, n=1, features=None):
+    """
+    Detects outliers using the modified Z-score method, returning the outlier rows from the input DataFrame.
+    Parameters:
+    - df: DataFrame or group.
+    - n: Minimum number of features an observation must be an outlier in.
+    - features: List of column names to check.
+    Returns:
+    - DataFrame containing outlier rows with original columns plus 'is_outlier' and 'Outlier_Reason'.
+    """
+    if features is None:
+        features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+    outlier_dict = {}  # Store index: [reasons]
+    threshold = 3
+
+    for column in features:
+        if column not in df.columns or not np.issubdtype(df[column].dtype, np.number):
+            continue
+        median = df[column].median()
+        mad = median_abs_deviation(df[column])
+        if mad == 0:
+            continue  # Skip if MAD is zero to avoid division by zero
+        mod_z_score = 0.6745 * (df[column] - median) / mad
+        # Check for low (negative) and high (positive) outliers
+        low_outliers = df[mod_z_score < -threshold].index
+        high_outliers = df[mod_z_score > threshold].index
+        for idx in low_outliers:
+            if idx not in outlier_dict:
+                outlier_dict[idx] = []
+            if column == 'price_total':
+                outlier_dict[idx].append(f"Low total price")
+            if column == 'price_m2':
+                outlier_dict[idx].append(f"Low price per m²")
+            if column == 'area':
+                outlier_dict[idx].append(f"Low area")
+        for idx in high_outliers:
+            if idx not in outlier_dict:
+                outlier_dict[idx] = []
+            if column == 'price_total':
+                outlier_dict[idx].append(f"High total price")
+            if column == 'price_m2':
+                outlier_dict[idx].append(f"High price per m²")
+            if column == 'area':
+                outlier_dict[idx].append(f"High area")
+
+    # Filter observations with >= n outlier features
+    outlier_indices = [
+        idx for idx, cols in outlier_dict.items() if len(cols) >= n
+    ]
+
+    # Create the output DataFrame with outlier rows
+    if not outlier_indices:
+        # Return empty DataFrame with same columns plus is_outlier and Outlier_Reason
+        out_df = df.iloc[0:0].copy()
+        out_df['is_outlier'] = pd.Series(dtype=bool)
+        out_df['Outlier_Reason'] = pd.Series(dtype=str)
+        return out_df
+
+    out_df = df.loc[outlier_indices].copy()
+    out_df['is_outlier'] = True
+    out_df['Outlier_Reason'] = [
+        ', '.join(outlier_dict[idx]) for idx in out_df.index
+    ]
+
+    return out_df
+
+# Outliers_IQR = IQR_method(df, 1, feature_list)
+# print(Outliers_IQR)
+# Outliers_z_score = z_scoremod_method(df, 1, feature_list)
+# print(Outliers_z_score)
