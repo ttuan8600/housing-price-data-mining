@@ -5,14 +5,6 @@ import altair as alt
 import folium
 from streamlit_folium import st_folium
 from data_outlier.outliers_detection import detect_zscore_outliers, detect_iqr_outliers, IQR_method, z_scoremod_method
-from matplotlib import pyplot as plt
-import seaborn as sns
-import re
-from scipy.stats import median_abs_deviation
-import numpy as np
-from collections import Counter
-import locale
-from matplotlib.ticker import FuncFormatter
 
 # Load data từ SQLite
 @st.cache_data
@@ -173,78 +165,5 @@ folium.LayerControl(collapsed=True).add_to(m)
 # Display the map in Streamlit
 st_folium(m, width=700, height=500)
 
-filtered_df = filtered_df.copy()
 
-# Add is_outlier column: True if row is in outliers, False otherwise
-filtered_df['is_outlier'] = filtered_df.index.isin(outliers.index)
-filtered_df.loc[outliers.index, 'Outlier_Reason'] = outliers['Outlier_Reason']
 
-# Selectbox for view options
-view_option = st.selectbox(
-    "Choose a filter",
-    ["All", "Outliers", "Non-outliers"],
-    index=0  # Default to "Both"
-)
-
-# Filter data based on view option
-if view_option == "Chỉ Outliers":
-    data_to_plot = filtered_df[filtered_df['is_outlier']]
-elif view_option == "Chỉ Non-outliers":
-    data_to_plot = filtered_df[~filtered_df['is_outlier']]
-else:  # Cả hai (Both)
-    data_to_plot = filtered_df
-data = data_to_plot.copy()
-display_data = data.rename(columns={
-    'property_type':'Property Type',
-    'Outlier_Reason': 'Outlier Reason',
-    'ward': 'Ward',
-    'district': 'District',
-    'price_total': 'Total Price (VND)',
-    'price_m2': 'Price per m² (VND)',
-    'area': 'Area (m²)'
-})
-# Display filtered data for verification
-st.write("Data chosen:")
-st.dataframe(
-    display_data[
-        ['Property Type', 'Ward', 'District', 'Total Price (VND)', 'Price per m² (VND)', 'Area (m²)', 'Outlier Reason']],
-    height=6 * 35,  # Approx. 35 pixels per row, 5 rows = 175 pixels
-    use_container_width=True
-)
-
-# Plot: Area vs Total Price with outliers highlighted
-st.write(f"### Scatter Plot of Total Price vs Area - {view_option}")
-chart_outlier = alt.Chart(data_to_plot).mark_circle(size=60).encode(
-    x=alt.X('area:Q', title='Area (m²)'),
-    y=alt.Y('price_total:Q', title='Total Price (VND)'),
-    color=alt.condition(
-        alt.datum.is_outlier,
-        alt.value("red"),  # Outliers in red
-        alt.value("steelblue")  # Non-outliers in steelblue
-    ),
-    tooltip=[
-        alt.Tooltip('property_type:N', title='Type'),
-        alt.Tooltip('area:Q', title='Area (m²)'),
-        alt.Tooltip('price_total:Q', title='Total Price (VND)', format=',.0f'),
-        alt.Tooltip('price_m2:Q', title='Price per m² (VND)', format=',.0f'),
-        alt.Tooltip('district:N', title='District'),
-        alt.Tooltip('ward:N', title='Ward'),
-        alt.Tooltip('Outlier_Reason:N', title='Reason')
-    ]
-).interactive()
-# Display the chart in Streamlit
-st.altair_chart(chart_outlier, use_container_width=True)
-
-type = st.selectbox("**Choose property type:**", ["Land", "House", 'Apartment'])
-# Filter data by selected property type
-data_to_plot_type = data_to_plot[data_to_plot['property_type'] == type.lower()]
-
-# Biểu đồ phân phối giá mỗi m²
-st.write("### Price per m² Distribution by Property Type")
-chart_price_m2 = alt.Chart(data_to_plot_type).mark_bar().encode(
-    alt.X('price_m2', bin=alt.Bin(maxbins=30), title='Giá mỗi m² (VND)'),
-    alt.Y('count()', title='Số lượng'),
-    color=alt.Color('is_outlier:N', legend=alt.Legend(title="Outlier"))
-).interactive()
-
-st.altair_chart(chart_price_m2, use_container_width=True)

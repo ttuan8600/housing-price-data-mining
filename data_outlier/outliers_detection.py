@@ -1,13 +1,10 @@
 # without using ML model
 import sqlite3
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 from scipy.stats import zscore
-
 from scipy.stats import median_abs_deviation
 import numpy as np
-from collections import Counter
+
 
 # conn = sqlite3.connect('../data_real_estate.db')
 #
@@ -27,6 +24,7 @@ def detect_iqr_outliers(data):
     lower_bound = Q1 - 1.5 * IQR
     upper_bound = Q3 + 1.5 * IQR
     return data[(data['price_m2'] < lower_bound) | (data['price_m2'] > upper_bound)]
+
 
 # Set a threshold for outliers
 def detect_zscore_outliers(data):
@@ -92,6 +90,7 @@ def IQR_method(df, n=1, features=None):
     ]
 
     return out_df
+
 
 def z_scoremod_method(df, n=1, features=None):
     """
