@@ -173,6 +173,10 @@ display_data = data.rename(columns={
     'price_m2': 'Price per m² (VND)',
     'area': 'Area (m²)'
 })
+# Format price columns with commas (e.g., 1,000,000)
+display_data['Total Price (VND)'] = display_data['Total Price (VND)'].apply(lambda x: "{:,.0f}".format(x))
+display_data['Price per m² (VND)'] = display_data['Price per m² (VND)'].apply(lambda x: "{:,.0f}".format(x))
+
 # Display filtered data for verification
 st.write("Data chosen:")
 st.dataframe(
