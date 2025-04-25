@@ -5,7 +5,7 @@ import altair as alt
 from matplotlib import pyplot as plt
 import seaborn as sns
 from matplotlib.ticker import FuncFormatter
-from data_outlier.outliers_detection import detect_zscore_outliers, detect_iqr_outliers, IQR_method, z_scoremod_method
+from data_outlier.outliers_detection import IQR_multivariate_spatial_method, z_score_multivariate_spatial_method
 
 
 # Load data from SQLite
@@ -22,7 +22,6 @@ def load_data():
 
 
 df = load_data()
-feature_list = ['price_m2', 'area', 'price_total']
 
 
 # Formatter function for comma-separated values
@@ -34,14 +33,29 @@ method = st.selectbox("Choose outlier detection method:", ["Z-score", "IQR"])
 st.title(f"🏡 Outliers Detection - {method} ")
 if method == "Z-score":
     st.info("""
-    ## 📚 Explanation of Z-score
-    **Z-score** measures how far a data point deviates from the mean of the dataset, in units of standard deviation.
-    - **Simple idea:** Imagine your data as exam scores. Z-score tells you how "high" or "low" a score is compared to the class average.
-    - **Example:**
-      - **Z-score = 2** means the value is 2 standard deviations away from the mean, possibly an **outlier**.
-      - **Z-score = 0** means it's equal to the mean.
-    - **Pros:** Easy to understand and fast to compute. Good for normally distributed data.
-    - **Cons:** Assumes data is normally distributed.
+        ## 📚Explanation of Z-Score Multivariate Spatial Outlier Detection
+
+        **Overview**
+
+        The z_score_multivariate_spatial_method identifies outliers in real estate data by integrating spatial clustering (via long and lat) with a multivariate Z-score-like approach. It flags properties with prices (e.g., price_m2, price_total) that are significantly different from those of geographically close neighbors, such as a property with an unusually high price in its area.
+
+        **How It Detects Outliers**
+
+        - Spatial Clustering with DBSCAN by long and lat
+        - Multivariate Outlier Detection using Z-Score method
+
+        **Reasons for Outliers**
+
+        - **High Price Discrepancy:** E.g., a house with price_total of 50B VND in a cluster averaging 5B VND.
+        - **Unusual Feature Combinations:**  A property’s price_m2, price_total, and area are jointly anomalous (e.g., high price despite average area).
+        - **Spatial Context:** Ensures anomalies are detected relative to nearby properties with similar location characteristics.
+
+        **Why This Approach?**
+
+        - **Spatial Relevance:** Limits price comparisons to nearby properties, reflecting local market conditions.
+        - **Multivariate Sensitivity:** Mahalanobis Distance detects anomalies in feature combinations, not just individual values.
+        - **Robustness:** MCD ensures reliable detection even with skewed or outlier-heavy data.
+
     """)
     st.image("./img/zscore.png", caption="Overview of Property Data", use_container_width=True)
     st.info("""
@@ -60,25 +74,36 @@ if method == "Z-score":
     - If your data is normal, use standard deviation. If not, MAD is a better choice for detecting spread.
     """)
     outliers = df.groupby('property_type', group_keys=False).apply(
-        lambda g: z_scoremod_method(g, n=1, features=feature_list))
+        lambda g: z_score_multivariate_spatial_method(g))
 else:
     st.info("""
-    ## 📚 Explanation of IQR
-    **IQR (Interquartile Range)** is the range between the third quartile (Q3) and the first quartile (Q1). It helps identify points that lie outside the normal spread.
-    - **Simple idea:** Imagine sorting exam scores from low to high and dividing them into 4 parts. IQR tells you the range between the middle 50%.
-    - **Procedure:**
-      1. Find the first quartile, Q1.
-      2. Find the third quartile, Q3.
-      3. Calculate the IQR. IQR = Q3-Q1.
-      4. Define the normal data range with lower limit as Q1–1.5 IQR and upper limit as Q3+1.5 IQR.
+    ## 📚Explanation of IQR Multivariate Spatial Outlier Detection
 
-    => **Any data point outside this range is considered as outlier.**
-    - **Pros:** Doesn’t require normal distribution. Good for skewed data.
-    - **Cons:** Might miss outliers that lie within the interquartile range.
+    **Overview**
+
+    The IQR_multivariate_spatial_method detects outliers in real estate data by combining spatial clustering (using long and lat) with a multivariate IQR-based approach. It identifies properties with anomalous prices (e.g., price_m2, price_total) compared to geographically close neighbors, addressing scenarios where a property’s price is unusually high within its locality.
+
+    **How It Detects Outliers**
+
+    - Spatial Clustering with DBSCAN by long and lat
+    - Multivariate Outlier Detection using IQR method
+
+    **Reasons for Outliers**
+
+    - **High Price Discrepancy:** E.g., a house with price_m2 of 500M VND in a cluster averaging 50M VND/m².
+    - **Unusual Feature Combinations:** A property’s mix of price_m2, price_total, and area is inconsistent with neighbors (e.g., high price for a small area).
+    - **Spatial Context:** Anomalies are relative to nearby properties, ensuring location-specific comparisons.
+
+    **Why This Approach?**
+
+    - **Spatial Relevance:** Compares prices only among nearby properties, where similar market conditions apply.
+    - **Multivariate Sensitivity:** Captures correlated feature anomalies via Mahalanobis Distance.
+    - **Robustness:** MCD and IQR make the method resilient to outliers and skewed data.
+
     """)
     st.image("./img/iqr.png", caption="Overview of Property Data", use_container_width=True)
     outliers = df.groupby('property_type', group_keys=False).apply(
-        lambda g: IQR_method(g, n=1, features=feature_list))
+        lambda g: IQR_multivariate_spatial_method(g))
     # Set seaborn style
     sns.set(style="whitegrid")
 
@@ -100,47 +125,6 @@ else:
         ax.yaxis.set_major_formatter(FuncFormatter(comma_format))
 
         st.pyplot(fig)
-# st.markdown(f"### 🔍 Total number of outliers detected by {method}: **{len(outliers)}**")
-
-# # Bar chart: Average price per m² by district
-# avg_price_by_district = df.groupby('district')['price_m2'].mean().reset_index()
-# chart_bar = alt.Chart(avg_price_by_district).mark_bar().encode(
-#     x='district',
-#     y='price_m2',
-#     color='district:N',
-#     tooltip=['district', 'price_m2']
-# ).properties(
-#     title='Average Price per m² by District'
-# )
-# st.altair_chart(chart_bar, use_container_width=True)
-#
-# # Plot: Average price per m² by district and property type
-# st.subheader('Average Price per m² by District and Property Type')
-# avg_price_by_district_type = df.groupby(['district', 'property_type'])['price_m2'].mean().unstack()
-# fig3, ax3 = plt.subplots(figsize=(14, 8))
-# avg_price_by_district_type.plot(kind='barh', stacked=False, colormap='tab10', ax=ax3)
-# plt.title('Average Price per m² by District and Property Type')
-# plt.xlabel('Average Price per m² (VND)')
-# plt.ylabel('District')
-# ax3.xaxis.set_major_formatter(FuncFormatter(comma_format))
-# plt.legend(title='Property Type', bbox_to_anchor=(1.05, 1), loc='upper left')
-# plt.grid(axis='x', linestyle='--', alpha=0.7)
-# plt.tight_layout()
-# st.pyplot(fig3)
-#
-# # Plot: Average price per m² by property type
-# st.subheader('Average Price per m² by Property Type')
-# avg_price_by_type = df.groupby('property_type')['price_m2'].mean().reset_index()
-# avg_price_by_type = avg_price_by_type.sort_values(by='price_m2', ascending=False)
-# fig4, ax4 = plt.subplots(figsize=(8, 5))
-# sns.barplot(data=avg_price_by_type, x='property_type', y='price_m2', hue='property_type', legend=False, ax=ax4)
-# plt.title('Average Price per m² by Property Type')
-# plt.xlabel('Property Type')
-# plt.ylabel('Average Price per m² (VND)')
-# ax4.yaxis.set_major_formatter(FuncFormatter(comma_format))
-# plt.xticks(rotation=15)
-# plt.tight_layout()
-# st.pyplot(fig4)
 
 
 filtered_df = df.copy()
@@ -157,12 +141,13 @@ view_option = st.selectbox(
 )
 
 # Filter data based on view option
-if view_option == "Chỉ Outliers":
+if view_option == "Outliers":
     data_to_plot = filtered_df[filtered_df['is_outlier']]
-elif view_option == "Chỉ Non-outliers":
+elif view_option == "Non-outliers":
     data_to_plot = filtered_df[~filtered_df['is_outlier']]
 else:  # Cả hai (Both)
     data_to_plot = filtered_df
+
 data = data_to_plot.copy()
 display_data = data.rename(columns={
     'property_type': 'Property Type',
