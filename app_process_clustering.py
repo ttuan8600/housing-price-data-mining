@@ -3,6 +3,8 @@ import streamlit as st
 import pandas as pd
 from matplotlib import pyplot as plt
 from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+import umap  # Thêm UMAP
 
 from data_clustering.elbow_visualize import get_elbow
 from data_clustering.standardize_data import standardize_data
@@ -15,6 +17,7 @@ def load_data():
     df = df.dropna(subset=['area', 'price_total', 'ward', 'district', 'long', 'lat']).copy()
     return df
 
+
 df = load_data()
 eps = 0.5
 min_samples = 5
@@ -23,13 +26,6 @@ df = standardize_data(df)
 
 # Title and Info
 st.title("KMeans Clustering Process")
-
-# st.info("""
-#     **KMeans – Clustering with a specific number of groups**
-#     - Divides the dataset into K distinct clusters.
-#     - Suitable when you want to **predict the cluster of a new real estate listing**.
-#     - Requires predefined number of clusters and can be less effective if the data has noise.
-#     """)
 
 # ELBOW Method
 st.subheader("Elbow Method")
@@ -40,17 +36,34 @@ ax.set_title('Elbow Method')
 ax.set_xlabel('Number of clusters')
 ax.set_ylabel('Inertia')
 st.pyplot(fig)
-# st.info("""
-# In the Elbow method, you look for the "elbow point" where the inertia starts to decrease more slowly. This indicates that increasing the number of clusters no longer significantly improves compactness.
-
-# From the chart, the inertia decreases sharply from k=1 to k=3, then the rate slows down from k=4 onward. The elbow point is most noticeable at k=3, where the curve begins to flatten.
-
-# Therefore, we choose k = 3.
-# """)
 # END ELBOW
 
+# Silhouette Score Method
+st.subheader("Silhouette Score Method")
+silhouette_scores = []
+range_n_clusters = range(2, 11)
+
+for n_clusters in range_n_clusters:
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+    cluster_labels = kmeans.fit_predict(data_scaled)
+    silhouette_avg = silhouette_score(data_scaled, cluster_labels)
+    silhouette_scores.append(silhouette_avg)
+
+# Vẽ biểu đồ Silhouette Score
+fig, ax = plt.subplots()
+ax.plot(range_n_clusters, silhouette_scores, marker='o')
+ax.set_title('Silhouette Score Method')
+ax.set_xlabel('Number of clusters')
+ax.set_ylabel('Silhouette Score')
+st.pyplot(fig)
+
+# In số K tối ưu dựa trên Silhouette Score
+optimal_k_silhouette = range_n_clusters[silhouette_scores.index(max(silhouette_scores))]
+st.write(f"Optimal number of clusters based on Silhouette Score: {optimal_k_silhouette}")
+# END Silhouette Score
+
 # KMeans Clustering
-kmeans = KMeans(n_clusters=3, random_state=42)
+kmeans = KMeans(n_clusters=5, random_state=42)
 kmeans.fit(data_scaled)
 labels = kmeans.labels_
 centroids = kmeans.cluster_centers_
@@ -59,7 +72,9 @@ df['cluster'] = labels
 cluster_name_mapping = {
     0: "Mid-range, near center",
     1: "High-end, prime location",
-    2: "Affordable, suburban"
+    2: "Affordable, suburban",
+    3: "Luxury, large area",
+    4: "Budget, remote"
 }
 
 st.write("Number of real estate listings in each cluster:")
@@ -70,27 +85,32 @@ st.write("Cluster centroids (in standardized feature space):")
 st.write(pd.DataFrame(centroids, columns=['price_total', 'price_m2', 'area', 'long', 'lat']))
 # END KMeans Clustering
 
-# Visualization
-st.subheader("KMeans Cluster Visualization")
-st.write("Scatter plot of clusters (based on total price and area)")
+# Visualization with UMAP
+st.subheader("KMeans Cluster Visualization (UMAP)")
+st.write("Scatter plot of clusters in 2D UMAP space")
 
-colors = ['blue', 'green', 'red']
+# Giảm chiều với UMAP
+umap_reducer = umap.UMAP(n_components=2, random_state=42)
+data_umap = umap_reducer.fit_transform(data_scaled)
+
+# Giảm chiều tâm cụm
+centroids_umap = umap_reducer.transform(centroids)
+
+colors = ['blue', 'green', 'red', 'purple', 'orange']
 fig, ax = plt.subplots(figsize=(10, 6))
 
-for cluster in range(3):
-    cluster_data = df[df['cluster'] == cluster]
-    ax.scatter(cluster_data['price_total'], cluster_data['area'],
+for cluster in range(5):
+    cluster_indices = df['cluster'] == cluster
+    ax.scatter(data_umap[cluster_indices, 0], data_umap[cluster_indices, 1],
                c=colors[cluster], label=f'Cluster {cluster}', alpha=0.6)
 
-centroids_original = scaler.inverse_transform(centroids)
-ax.scatter(centroids_original[:, 0], centroids_original[:, 2],
+# Vẽ tâm cụm
+ax.scatter(centroids_umap[:, 0], centroids_umap[:, 1],
            c='black', marker='x', s=200, linewidths=3, label='Centroid')
 
-ax.set_title('Real Estate Clustering with KMeans')
-ax.set_xlabel('Total Price (price_total, million VND)')
-ax.set_xscale('log')
-ax.set_ylabel('Area (m²)')
-ax.set_yscale('log')
+ax.set_title('Real Estate Clustering with KMeans (UMAP)')
+ax.set_xlabel('UMAP Component 1')
+ax.set_ylabel('UMAP Component 2')
 ax.legend()
 
 st.pyplot(fig)
