@@ -4,7 +4,7 @@ import sqlite3
 import altair as alt
 import folium
 from streamlit_folium import st_folium
-from data_outlier.outliers_detection import IQR_multivariate_spatial_method, z_score_multivariate_spatial_method
+from data_outlier.outliers_detection import IQR_multivariate_spatial_method, lof_multivariate_spatial_method
 
 # Load data từ SQLite
 @st.cache_data
@@ -19,7 +19,7 @@ def load_data():
 
 st.title("🏡 Real Estate Price Analysis - Outlier Detection")
 df = load_data()
-method = st.selectbox("**Outlier detection method:**", ["Z-score", "IQR"])
+method = st.selectbox("**Outlier detection method:**", ["LOF", "IQR"])
 
 # Slider for price_total
 min_price, max_price = st.slider(
@@ -57,7 +57,7 @@ if method == "IQR":
 
 else:
     outliers = filtered_df.groupby('property_type', group_keys=False).apply(
-        lambda g: z_score_multivariate_spatial_method(g))
+        lambda g: lof_multivariate_spatial_method(g))
 
 st.markdown(f"### 🔍 Total number of outliers detected by {method}: **{len(outliers)}**")
 # Format display DataFrame for st.dataframe

@@ -5,7 +5,7 @@ import altair as alt
 from matplotlib import pyplot as plt
 import seaborn as sns
 from matplotlib.ticker import FuncFormatter
-from data_outlier.outliers_detection import IQR_multivariate_spatial_method, z_score_multivariate_spatial_method
+from data_outlier.outliers_detection import IQR_multivariate_spatial_method, lof_multivariate_spatial_method
 
 
 # Load data from SQLite
@@ -29,52 +29,50 @@ def comma_format(x, _):
     return f'{int(x):,}'
 
 
-method = st.selectbox("Choose outlier detection method:", ["Z-score", "IQR"])
+method = st.selectbox("Choose outlier detection method:", ["LOF", "IQR"])
 st.title(f"🏡 Outliers Detection - {method} ")
-if method == "Z-score":
+if method == "LOF":
     st.info("""
         ## 📚Explanation of Z-Score Multivariate Spatial Outlier Detection
 
         **Overview**
 
-        The z_score_multivariate_spatial_method identifies outliers in real estate data by integrating spatial clustering (via long and lat) with a multivariate Z-score-like approach. It flags properties with prices (e.g., price_m2, price_total) that are significantly different from those of geographically close neighbors, such as a property with an unusually high price in its area.
+        Local Outlier Factor (LOF) is a density-based algorithm used to identify outliers in a dataset. It measures how isolated a data point is compared to its neighbors by comparing the local density of the point to the densities of its surrounding points. Points that have a significantly lower density than their neighbors are considered outliers.
 
         **How It Detects Outliers**
 
-        - Spatial Clustering with DBSCAN by long and lat
-        - Multivariate Outlier Detection using Z-Score method
+        LOF operates by analyzing the local structure of the data. Here’s a step-by-step breakdown:
+
+        1. **LOF Score:**
+
+        The LOF score for a point is the average ratio of the LRD of its ( k ) neighbors to its own LRD.
+
+        Interpretation:
+
+        - LOF ≈ 1: The point has a similar density to its neighbors (not an outlier).
+        - LOF > 1: The point has a lower density than its neighbors (potential outlier).
+        - LOF < 1: The point is in a denser region than its neighbors (likely not an outlier).
+
+        2. **Outlier Detection:**
+
+        Points with high LOF scores (e.g., > 1.5) are flagged as outliers, indicating they are less dense (more isolated) than their neighbors.
 
         **Reasons for Outliers**
 
-        - **High Price Discrepancy:** E.g., a house with price_total of 50B VND in a cluster averaging 5B VND.
-        - **Unusual Feature Combinations:**  A property’s price_m2, price_total, and area are jointly anomalous (e.g., high price despite average area).
-        - **Spatial Context:** Ensures anomalies are detected relative to nearby properties with similar location characteristics.
+        In the context of real estate data, LOF is used to detect properties with unusual characteristics (e.g., `price_m2`, `price_total`, `area`) within spatial clusters defined by `long` and `lat`. For example:
+        - A house with a `price_m2` of 500M VND in a neighborhood where others average 50M VND/m² will have a low local density (high LOF score) because its price is extreme compared to nearby properties.
+        - LOF considers the multivariate combination of features, so a property with a reasonable `price_m2` but an unusual `price_total` and `area` combination can also be flagged.
 
         **Why This Approach?**
 
-        - **Spatial Relevance:** Limits price comparisons to nearby properties, reflecting local market conditions.
-        - **Multivariate Sensitivity:** Mahalanobis Distance detects anomalies in feature combinations, not just individual values.
-        - **Robustness:** MCD ensures reliable detection even with skewed or outlier-heavy data.
+        - **Local Sensitivity:** Unlike global methods (e.g., Z-score), LOF focuses on local neighborhoods, making it effective for datasets with varying densities.
+        - **Multivariate:** Handles multiple features (e.g., price_m2, price_total, area) simultaneously, capturing complex anomalies.
+        - **No Distribution Assumption:** Does not assume the data follows a specific distribution, ideal for skewed real estate data.
 
     """)
-    st.image("./img/zscore.png", caption="Overview of Property Data", use_container_width=True)
-    st.info("""
-    Z-scores can be skewed by extreme values, which makes them less reliable for detecting outliers. A single outlier can distort the mean and affect all z-scores.
-    A more robust method is the modified z-score, which is less sensitive to extreme values. It's calculated as:
-    """)
-    st.image("./img/z.png", caption="Modified Z-score", use_container_width=True)
-    st.markdown("""
-    Where:
-    - xi: A single data value
-    - x̃: The median of the dataset
-    - MAD: The median absolute deviation of the dataset
-    """)
-    st.info("""
-    - **The median absolute deviation (MAD)** measures how spread out data is, but unlike standard deviation, it's not affected much by outliers.
-    - If your data is normal, use standard deviation. If not, MAD is a better choice for detecting spread.
-    """)
+    st.image("./img/lof.png", use_container_width=True)
     outliers = df.groupby('property_type', group_keys=False).apply(
-        lambda g: z_score_multivariate_spatial_method(g))
+        lambda g: lof_multivariate_spatial_method(g))
 else:
     st.info("""
     ## 📚Explanation of IQR Multivariate Spatial Outlier Detection

@@ -4,6 +4,8 @@ from scipy.stats import chi2
 from sklearn.covariance import MinCovDet
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import DBSCAN
+from sklearn.neighbors import LocalOutlierFactor
+
 
 def IQR_multivariate_spatial_method(df, features=None, eps=0.05, min_samples=40, threshold=1.5):
     """
@@ -100,16 +102,17 @@ def IQR_multivariate_spatial_method(df, features=None, eps=0.05, min_samples=40,
 
     return out_df
 
-def z_score_multivariate_spatial_method(df, features=None, eps=0.05, min_samples=40, threshold=10):
+def lof_multivariate_spatial_method(df, features=None, eps=0.05, min_samples=40, n_neighbors=20, lof_threshold=1.5):
     """
-    Detects multivariate outliers within spatial clusters using Mahalanobis Distance.
+    Detects multivariate outliers within spatial clusters using Local Outlier Factor (LOF).
     Parameters:
     - df: DataFrame or group, must include 'long' and 'lat' columns.
     - features: List of column names to check for outliers (e.g., ['price_m2', 'price_total']).
                If None, uses all numeric columns except 'long' and 'lat'.
-    - eps: Maximum distance (in degrees) for DBSCAN clustering (default 0.01, ~1.1km).
-    - min_samples: Minimum number of points to form a cluster (default 5).
-    - threshold: Threshold for Mahalanobis distance (default 3.0).
+    - eps: Maximum distance (in degrees) for DBSCAN clustering (default 0.05, ~5.5km).
+    - min_samples: Minimum number of points to form a cluster (default 40).
+    - n_neighbors: Number of neighbors for LOF density estimation (default 20).
+    - lof_threshold: Threshold for LOF score to identify outliers (default 1.5).
     Returns:
     - DataFrame containing outlier rows with original columns plus 'is_outlier' and 'Outlier_Reason'.
     """
@@ -138,7 +141,7 @@ def z_score_multivariate_spatial_method(df, features=None, eps=0.05, min_samples
     # Process each cluster (excluding noise points, label -1)
     for cluster in set(df['cluster']) - {-1}:
         cluster_df = df[df['cluster'] == cluster].copy()
-        if len(cluster_df) < 3:  # Skip small clusters
+        if len(cluster_df) < max(n_neighbors, 3):  # Ensure enough points for LOF
             continue
 
         # Extract feature data for the cluster
@@ -148,27 +151,21 @@ def z_score_multivariate_spatial_method(df, features=None, eps=0.05, min_samples
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
 
-        # Use Minimum Covariance Determinant for robust covariance
-        try:
-            mcd = MinCovDet(random_state=42).fit(X_scaled)
-            center = mcd.location_
-            cov = mcd.covariance_
-        except ValueError:
-            continue
+        # Apply Local Outlier Factor
+        lof = LocalOutlierFactor(n_neighbors=n_neighbors, metric='euclidean')
+        lof.fit(X_scaled)
+        # LOF scores are negative; higher (less negative) values indicate outliers
+        lof_scores = -lof.negative_outlier_factor_
 
-        # Compute Mahalanobis distance
-        inv_cov = np.linalg.inv(cov)
-        distances = np.sqrt(np.sum((X_scaled - center) @ inv_cov * (X_scaled - center), axis=1))
-
-        # Identify outliers
-        outlier_mask = distances > threshold
+        # Identify outliers based on LOF score threshold
+        outlier_mask = lof_scores > lof_threshold
         outlier_indices = cluster_df.index[outlier_mask].tolist()
 
         if outlier_indices:
             cluster_out_df = cluster_df.loc[outlier_indices].copy()
             cluster_out_df['is_outlier'] = True
             cluster_out_df['Outlier_Reason'] = [
-                f"Spatial outlier in cluster {cluster} (Mahalanobis distance={distances[cluster_df.index.get_loc(idx)]:.2f})"
+                f"Spatial outlier in cluster {cluster} (LOF score={lof_scores[cluster_df.index.get_loc(idx)]:.2f})"
                 for idx in cluster_out_df.index
             ]
             out_dfs.append(cluster_out_df)
