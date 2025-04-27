@@ -35,7 +35,7 @@ df = standardize_data(df)
 data_scaled, scaler, elbow_inertia = get_elbow(df)
 
 # K-Means Clustering
-kmeans = KMeans(n_clusters=3, random_state=42)
+kmeans = KMeans(n_clusters=5, random_state=42)
 kmeans.fit(data_scaled)
 labels = kmeans.labels_
 centroids = kmeans.cluster_centers_
@@ -45,7 +45,9 @@ df['cluster'] = labels
 cluster_name_mapping = {
     0: "Mid-range, near center",
     1: "High-end, prime location",
-    2: "Affordable, outskirts"
+    2: "Affordable, suburban",
+    3: "Luxury, large area",
+    4: "Budget, remote"
 }
 
 # Cluster counts
@@ -115,7 +117,7 @@ popup_style = """
 </style>
 """
 districts = sorted(df['district'].unique())
-colors = {0: 'blue', 1: 'green', 2: 'purple'}
+colors = ['blue', 'green', 'red', 'purple', 'orange']
 
 # Add layers for each district
 for district in districts:
